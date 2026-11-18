@@ -56,32 +56,22 @@ class ChatRequest(BaseModel):
 
 
 def ask_ai(system_prompt: str, user_prompt: str) -> Optional[str]:
-    import urllib.request
+    if not API_KEY:
+        return None
 
-    try:
-        payload = {
-            "model": "llama3.2:3b",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            "stream": False
-        }
+    from openai import OpenAI
 
-        request = urllib.request.Request(
-            "http://127.0.0.1:11434/api/chat",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
+    client = OpenAI(api_key=API_KEY)
 
-        with urllib.request.urlopen(request, timeout=300) as response:
-            result = json.loads(response.read().decode("utf-8"))
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+    )
 
-        return result["message"]["content"]
-
-    except Exception as exc:
-        raise RuntimeError(f"Ollama service error: {exc}") from exc
+    return response.choices[0].message.content
 
 
 
