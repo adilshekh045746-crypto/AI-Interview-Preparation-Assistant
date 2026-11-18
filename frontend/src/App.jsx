@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Activity, ArrowRight, Award, Bot, BrainCircuit, BriefcaseBusiness, CheckCircle2, ChevronRight, CircleHelp, ClipboardList, Code2, Gauge, GraduationCap, MessageCircle, Mic2, RefreshCw, Send, Sparkles, Target, TrendingUp, UserRound, WandSparkles } from 'lucide-react'
 
-const API = 'http://127.0.0.1:8000'
+const API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 const navItems = [
   { id: 'overview', label: 'Overview', icon: Activity },
   { id: 'questions', label: 'Question generator', icon: ClipboardList },
