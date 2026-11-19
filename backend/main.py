@@ -231,15 +231,22 @@ Use simple English and constructive feedback.
             prompt
         )
 
+        if not ai_text:
+            return {
+                "reply": f"Can you explain an important skill required for the {data.role} role?",
+                "mode": "demo"
+            }
+
         return {
             "reply": ai_text,
             "mode": "ai"
         }
 
-    except RuntimeError as exc:
+    except Exception as exc:
+        print(f"AI service error: {exc}")
         raise HTTPException(
             status_code=503,
-            detail="Ollama AI service unavailable."
+            detail="AI service unavailable."
         ) from exc
 
 
