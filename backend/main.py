@@ -56,22 +56,35 @@ class ChatRequest(BaseModel):
 
 
 def ask_ai(system_prompt: str, user_prompt: str) -> Optional[str]:
-    if not API_KEY:
+    import urllib.request
+
+    if not os.getenv("OLLAMA_URL"):
         return None
 
-    from openai import OpenAI
+    try:
+        payload = {
+            "model": "llama3.2:3b",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "stream": False
+        }
 
-    client = OpenAI(api_key=API_KEY)
+        request = urllib.request.Request(
+            os.getenv("OLLAMA_URL") + "/api/chat",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-    )
+        with urllib.request.urlopen(request, timeout=120) as response:
+            result = json.loads(response.read())
+            return result["message"]["content"]
 
-    return response.choices[0].message.content
+    except Exception as exc:
+        print(f"AI service error: {exc}")
+        return None
 
 
 
@@ -231,11 +244,34 @@ Use simple English and constructive feedback.
             prompt
         )
 
+        
         if not ai_text:
+            questions = [
+                f"What is an important skill required for a {data.role}?",
+                f"What technologies are commonly used in {data.role}?",
+                f"Describe a challenging problem related to {data.role}.",
+                "How do you handle difficult tasks?",
+                "How do you improve your technical skills?",
+                "Why should we hire you for this role?"
+            ]
+
+            previous = [
+                m.content for m in data.messages
+                if m.role == "assistant"
+            ]
+
+            remaining = [
+                q for q in questions
+                if q not in previous
+            ]
+
+            question = random.choice(remaining or questions)
+
             return {
-                "reply": f"Can you explain an important skill required for the {data.role} role?",
+                "reply": question,
                 "mode": "demo"
             }
+
 
         return {
             "reply": ai_text,
