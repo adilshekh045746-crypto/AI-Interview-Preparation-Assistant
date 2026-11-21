@@ -55,36 +55,65 @@ class ChatRequest(BaseModel):
 
 
 
+
 def ask_ai(system_prompt: str, user_prompt: str) -> Optional[str]:
     import urllib.request
+    import urllib.error
 
-    if not os.getenv("OLLAMA_URL"):
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+
+    if not api_key:
+        print("GEMINI_API_KEY is missing")
         return None
+
+    model = "gemini-2.5-flash"
+
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/"
+        f"models/{model}:generateContent"
+    )
+
+    payload = {
+        "systemInstruction": {
+            "parts": [{"text": system_prompt}]
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": user_prompt}]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 2048
+        }
+    }
+
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key
+        },
+        method="POST"
+    )
 
     try:
-        payload = {
-            "model": "llama3.2:3b",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            "stream": False
-        }
+        with urllib.request.urlopen(request, timeout=90) as response:
+            result = json.loads(response.read().decode("utf-8"))
 
-        request = urllib.request.Request(
-            os.getenv("OLLAMA_URL") + "/api/chat",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
+        parts = result["candidates"][0]["content"]["parts"]
+        return "".join(part.get("text", "") for part in parts).strip() or None
 
-        with urllib.request.urlopen(request, timeout=120) as response:
-            result = json.loads(response.read())
-            return result["message"]["content"]
+    except urllib.error.HTTPError as exc:
+        print(f"Gemini API HTTP error: {exc.code}")
+        return None
 
     except Exception as exc:
-        print(f"AI service error: {exc}")
+        print(f"Gemini AI error: {type(exc).__name__}")
         return None
+
 
 
 
